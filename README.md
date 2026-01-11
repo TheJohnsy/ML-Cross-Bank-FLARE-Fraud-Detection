@@ -56,3 +56,8 @@ The implementation follows a three-phase structure based on the Cross-Silo FL pa
 
 * **Zohar Sahar** - 315144840
 * **Yonatan Harel** - 208742593
+
+
+### Docker infrastructure diagram
+<img width="804" height="490" alt="image" src="https://github.com/user-attachments/assets/8382db20-ea84-4459-9feb-de1d70cddd27" />
+
