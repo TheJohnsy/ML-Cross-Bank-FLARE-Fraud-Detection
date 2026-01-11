@@ -1,99 +1,139 @@
 # Cross-Bank Federated Transaction Fraud Detection
 
-## Project Overview
-
-This project implements a privacy-preserving, federated transaction fraud detection system using the **NVIDIA FLARE (NVFlare)** framework. By utilizing **Federated Learning (FL)**, we enable multiple simulated banks to collaboratively train a high-performance **XGBoost** model without ever sharing raw, sensitive customer data.
-
-This approach addresses the data-sharing limitations of the financial sector while building a global model that is significantly more effective against widespread fraud rings than any single-institution model.
-
----
-
-## Goals & Success Criteria
-
-1. **Global Model Quality:** Maximize the **F1-Score** on a global held-out test set, ensuring a balance between precision and recall in a highly imbalanced dataset.
-2. **Collaborative Uplift:** Demonstrate that the Federated Global Model outperforms local models trained only on individual "Bank" silos.
-3. **Security & Privacy:** Ensure all communications are encrypted via **mTLS** and that model updates are protected with **Differential Privacy (DP)** filters.
-4. **Explainability:** Use **SHAP** to validate that engineered "Velocity Features" are primary drivers of fraud detection.
-
----
+This project implements a privacy-preserving, federated transaction fraud detection system using **NVIDIA FLARE (NVFlare)** and **XGBoost**. It enables financial institutions to collaboratively train high-performance models while keeping sensitive raw transaction data strictly local.
 
 ## Tech Stack
 
-| Component | Technology |
-| --- | --- |
-| **FL Framework** | NVIDIA FLARE (NVFlare) |
-| **ML Algorithm** | XGBoost |
-| **Data Processing** | Pandas, NumPy, NVIDIA RAPIDS |
-| **Privacy** | FLARE Privacy Filters (Differential Privacy) |
-| **Security** | Mutual TLS (mTLS) Startup Kits |
-| **Interpretability** | SHAP |
+| Category | Tool / Library | Role in Project |
+| --- | --- | --- |
+| **Federated Learning** | **NVIDIA FLARE** | Core SDK for secure, distributed orchestration and job management.
+
+ |
+| **ML Algorithm** | **XGBoost** | High-performance classifier for tabular transaction data.
+
+ |
+| **Data Processing** | **Pandas, NumPy, RAPIDS** | Used for local feature engineering and data manipulation.
+
+ |
+| **Privacy** | **FLARE Privacy Filters** | Implements Differential Privacy (DP) for model updates.
+
+ |
+| **Interpretability** | **SHAP** | Validates business logic and feature importance.
+
+ |
+| **Deployment** | **Python, Docker** | Primary language and containerization for consistent deployment.
+
+ |
 
 ---
 
-## Dataset: IEEE-CIS Fraud Detection
+## System Architecture
 
-We utilize the **IEEE-CIS Fraud Detection** dataset (Vesta).
+The system follows a **Horizontal Federated Learning** paradigm. Each bank (client) possesses the same feature set but different customer populations. The central server orchestrates the training rounds without ever seeing raw data.
 
-* **Partitioning:** To simulate a federated environment, the data is partitioned into **three non-IID silos** (Bank A, B, and C) based on the `card1` (Issuer ID) feature.
-* **Feature Engineering:** Custom "Velocity Features" are calculated locally at each bank, focusing on transaction counts/sums within **30-minute** and **2-hour** windows using the `TransactionDT` timedelta.
+* 
+**FL Server:** Orchestrates the training lifecycle, manages mTLS certificates, and aggregates model updates using the **FedAvg** algorithm.
 
----
 
-## Implementation Roadmap (A-Z)
+* 
+**FL Clients (Banks):** Execute local training on private datasets and apply **Differential Privacy (DP)** filters before sending updates to the server.
 
-### Phase 1: Foundations & Local Baseline
 
-* [ ] **Data Slicing:** Merge identity/transaction data and partition into `Bank_A.csv`, `Bank_B.csv`, and `Bank_C.csv`.
-* [ ] **Feature Engineering:** Implement the velocity logic and profile Z-scores.
-* [ ] **Baseline Benchmarking:** Train local XGBoost models on each silo and record the F1-Score.
-
-### Phase 2: NVFlare Integration
-
-* [ ] **Client API Wrapper:** Integrate `nvflare.client` into the training script.
-* [ ] **Job Definition:** Create the NVFlare job folder structure and `config_fed_server.json`.
-* [ ] **Simulator Test:** Run the initial federation in `nvflare simulator` mode to verify logic.
-
-### Phase 3: Security Hardening
-
-* [ ] **Secure Provisioning:** Create `project.yml` and run `nvflare provision` to generate certificates.
-* [ ] **mTLS Implementation:** Deploy Startup Kits to the server and the three client sites.
-* [ ] **Privacy Filters:** Inject Differential Privacy (DP) filters into the client configurations to protect against model inversion.
-
-### Phase 4: Analysis & Validation
-
-* [ ] **Cross-Site Evaluation:** Run the final global model against all bank test sets.
-* [ ] **SHAP Analysis:** Generate feature importance plots for the global model.
-* [ ] **Final Report:** Document the "Collaborative Uplift" (Global F1 vs. Local F1).
 
 ---
 
-## Security & Privacy Implementation
+## Data & Feature Engineering
 
-Since this project targets a sensitive domain (Finance), we implement:
+We utilize the **IEEE-CIS Fraud Detection** dataset, partitioned into non-IID silos to simulate varying institutional fraud profiles.
 
-* **mTLS:** Every participant (Server, Clients, Admin) must present a valid certificate signed by the project CA.
-* **Differential Privacy:** Noise is added to the XGBoost gradients before aggregation to ensure individual transactions cannot be reconstructed from the model.
+### 1. Short-Term Velocity Features
+
+To capture immediate fraudulent behavior, each client computes local features before training:
+
+* 
+**Transaction Frequency:** Count of transactions per `cardID` in the last **30 minutes** and **2 hours**.
+
+
+* 
+**Volumetric Metrics:** Sum of transaction amounts for a specific user within the same time windows.
+
+
+
+### 2. Local Benchmarking
+
+Before federating, each bank trains a local **XGBoost** model to establish a baseline. Our success metric is the **Collaborative Uplift**: the increase in **F1-Score** when using the global federated model compared to isolated local training.
 
 ---
 
-## Project Structure
+## Security & Privacy Configuration
 
-```text
-├── data/                   # Dataset partitions (Bank A, B, C)
-├── jobs/
-│   └── fraud_detection/    # NVFlare Job definition
-│       ├── app/
-│       │   └── config/     # Server/Client JSON configs
-│       └── custom/         # Learner & Feature Engineering logic
-├── provisioning/           # project.yml and generated Startup Kits
-├── notebooks/              # Local baseline & SHAP analysis
-└── README.md
+### 1. Secure Provisioning (mTLS)
+
+The system is hardened using **Mutual TLS (mTLS)**. Every participant (server, clients, and admin) must possess a Startup Kit containing certificates signed by a private Root CA.
+
+### 2. Differential Privacy (DP) Filters
+
+To protect against model inversion, we apply privacy filters on the client side to modify updates before sharing.
+
+**Example `config_fed_client.json` snippet:**
+
+```json
+"task_result_filters": [
+    {
+        "tasks": ["train"],
+        "filters": [
+            {
+                "path": "nvflare.app_common.filters.svt_privacy.SVTPrivacy",
+                "args": {
+                    "fraction": 0.1,
+                    "epsilon": 0.1
+                }
+            }
+        ]
+    }
+]
 
 ```
 
 ---
 
-## Contributors
+## Implementation Roadmap
 
-* **Zohar Sahar** - 315144840
-* **Yonatan Harel** - 208742593
+### Stage 1: The Simulator (Development)
+
+Rapidly iterate on the `ModelLearner` using the NVFlare Simulator to debug feature engineering and aggregation logic.
+
+```bash
+nvflare simulator jobs/fraud_job -w workspace -n 3 -t 3
+
+```
+
+### Stage 2: Dockerized Distributed System (Final Deployment)
+
+To meet the requirement for an independent server-side update, we deploy as independent containers using `docker-compose`.
+
+* 
+**Server Container:** Performs global model aggregation.
+
+
+* 
+**Client Containers:** Maintain private data silos and perform local training.
+
+
+
+---
+
+## 📈 Evaluation & XAI
+
+Upon completion, the system executes the **Cross-Site Evaluator** to perform final model validation on an external test set. Finally, we apply **SHAP** to interpret model predictions and validate the utility of the engineered velocity features.
+
+---
+
+## 👥 Contributors
+
+* 
+**Zohar Sahar** - 315144840 
+
+
+* 
+**Yonatan Harel** - 208742593
