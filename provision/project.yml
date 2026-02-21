@@ -1,0 +1,43 @@
+api_version: 3
+name: fraud_fl
+description: "Cross-bank federated fraud detection with NVFlare"
+
+participants:
+  - name: server
+    type: server
+    org: openclaw
+    fed_learn_port: 8002
+    admin_port: 8003
+
+  - name: site-1
+    type: client
+    org: bank_a
+    enable_byoc: true
+
+  - name: site-2
+    type: client
+    org: bank_b
+    enable_byoc: true
+
+  - name: site-3
+    type: client
+    org: bank_c
+    enable_byoc: true
+
+  - name: admin@openclaw.ai
+    type: admin
+    org: openclaw
+    role: project_admin
+
+builders:
+  - path: nvflare.lighter.impl.workspace.WorkspaceBuilder
+    args:
+      template_file: master_template.yml
+
+  - path: nvflare.lighter.impl.static_file.StaticFileBuilder
+    args:
+      config_folder: config
+
+  - path: nvflare.lighter.impl.cert.CertBuilder
+
+  - path: nvflare.lighter.impl.signature.SignatureBuilder

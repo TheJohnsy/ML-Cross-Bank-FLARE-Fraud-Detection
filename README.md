@@ -61,3 +61,50 @@ The implementation follows a three-phase structure based on the Cross-Silo FL pa
 ### Docker infrastructure diagram
 <img width="804" height="490" alt="image" src="https://github.com/user-attachments/assets/8382db20-ea84-4459-9feb-de1d70cddd27" />
 
+## Day 5 — Dataset Integration Runbook
+
+Once the IEEE-CIS dataset is downloaded from Kaggle, run the following steps in order from the project root.
+
+### 1. Place dataset files
+```
+data/raw/train_transaction.csv
+data/raw/train_identity.csv
+```
+
+### 2. Partition into 3 bank silos
+```bash
+python scripts/partition_data.py
+```
+
+### 3. Engineer features (run for each bank)
+```bash
+python scripts/feature_engineering.py --bank a
+python scripts/feature_engineering.py --bank b
+python scripts/feature_engineering.py --bank c
+```
+
+### 4. Train and evaluate local baselines
+```bash
+python scripts/local_baseline.py --bank a
+python scripts/local_baseline.py --bank b
+python scripts/local_baseline.py --bank c
+```
+Metrics saved to `data/partitioned/bank_{a,b,c}_baseline_metrics.json`.
+
+### 5. Provision NVFlare startup kits
+```bash
+nvflare provision -p provision/project.yml -w workspace
+```
+
+### 6. Launch federated training
+```bash
+docker-compose up
+```
+Runs 10 FL rounds across server + bank_a + bank_b + bank_c.
+
+### 7. Run SHAP analysis on global model
+```bash
+python evaluation/shap_analysis.py
+```
+Saves `evaluation/shap_summary.png` and validates velocity features in top-10 SHAP importance.
+

@@ -1,0 +1,11 @@
+data/
+workspace/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.env
+*.log
+evaluation/shap_summary.png

@@ -1,0 +1,62 @@
+version: "3.9"
+
+networks:
+  fl-net:
+    driver: bridge
+
+x-client-base: &client-base
+  build: .
+  networks:
+    - fl-net
+  depends_on:
+    - nvflare-server
+  restart: on-failure
+
+services:
+  nvflare-server:
+    build: .
+    networks:
+      - fl-net
+    ports:
+      - "8002:8002"
+      - "8003:8003"
+    volumes:
+      - ./workspace/server:/workspace/workspace/server
+    command: >
+      python -m nvflare.private.fed.app.server.server_train
+      -m /workspace/workspace/server
+      -s fed_server.json
+      --set secure_train=false
+
+  bank_a:
+    <<: *client-base
+    volumes:
+      - ./workspace/site-1:/workspace/workspace/site-1
+      - ./data/partitioned/bank_a_engineered.csv:/workspace/data/partitioned/bank_a_engineered.csv:ro
+    command: >
+      python -m nvflare.private.fed.app.client.client_train
+      -m /workspace/workspace/site-1
+      -s fed_client.json
+      --set secure_train=false uid=site-1
+
+  bank_b:
+    <<: *client-base
+    volumes:
+      - ./workspace/site-2:/workspace/workspace/site-2
+      - ./data/partitioned/bank_b_engineered.csv:/workspace/data/partitioned/bank_b_engineered.csv:ro
+    command: >
+      python -m nvflare.private.fed.app.client.client_train
+      -m /workspace/workspace/site-2
+      -s fed_client.json
+      --set secure_train=false uid=site-2
+
+  bank_c:
+    <<: *client-base
+    volumes:
+      - ./workspace/site-3:/workspace/workspace/site-3
+      - ./data/partitioned/bank_c_engineered.csv:/workspace/data/partitioned/bank_c_engineered.csv:ro
+    command: >
+      python -m nvflare.private.fed.app.client.client_train
+      -m /workspace/workspace/site-3
+      -s fed_client.json
+      --set secure_train=false uid=site-3

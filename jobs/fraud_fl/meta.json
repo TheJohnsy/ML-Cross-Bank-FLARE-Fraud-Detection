@@ -1,0 +1,9 @@
+{
+  "name": "fraud_fl",
+  "resource_spec": {},
+  "deploy_map": {
+    "app": ["@ALL"]
+  },
+  "min_clients": 3,
+  "mandatory_clients": ["site-1", "site-2", "site-3"]
+}

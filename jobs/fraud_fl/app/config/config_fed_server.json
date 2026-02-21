@@ -1,0 +1,37 @@
+{
+  "format_version": 2,
+  "workflows": [
+    {
+      "id": "fedavg",
+      "path": "nvflare.app_common.workflows.fedavg.FedAvg",
+      "args": {
+        "num_rounds": 10,
+        "start_round": 0,
+        "min_clients": 3,
+        "aggregator_id": "aggregator",
+        "persistor_id": "persistor"
+      }
+    }
+  ],
+  "components": [
+    {
+      "id": "aggregator",
+      "path": "nvflare.app_common.aggregators.collect_and_assemble_aggregator.CollectAndAssembleAggregator",
+      "args": {
+        "assembler_id": "assembler"
+      }
+    },
+    {
+      "id": "assembler",
+      "path": "nvflare.app_common.aggregators.model_assembler.ModelAssembler",
+      "args": {}
+    },
+    {
+      "id": "persistor",
+      "path": "nvflare.app_common.persistors.json_model_persistor.JsonModelPersistor",
+      "args": {
+        "save_name": "global_fraud_model.json"
+      }
+    }
+  ]
+}
