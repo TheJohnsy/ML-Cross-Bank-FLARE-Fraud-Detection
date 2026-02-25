@@ -107,3 +107,12 @@ python evaluation/shap_analysis.py
 Saves `evaluation/shap_summary.png` and validates velocity features in top-10 SHAP importance.
 
 
+## Implementation Progress
+
+- Completed dataset placement
+- Completed data partitioning
+- Completed feature engineering for all banks
+- Completed local baseline training and metric generation
+- Completed NVFlare provisioning
+- Federated training (Docker end-to-end setup in progress)
+- SHAP-based global model evaluation (pending)
