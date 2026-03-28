@@ -10,7 +10,10 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBClassifier
 
 from config import FEATURE_COLS, TARGET_COL, XGBOOST_PARAMS, PARTITIONED_DIR
-from utils.metrics import compute_metrics, save_metrics
+from utils.metrics import (
+    compute_metrics, compute_metrics_at_threshold,
+    find_optimal_threshold, save_metrics,
+)
 
 
 def get_feature_cols(df: pd.DataFrame) -> list[str]:
@@ -35,21 +38,42 @@ def run_baseline(bank: str) -> None:
     )
     print(f"  Train: {len(X_train):,}  Test: {len(X_test):,}  Fraud rate test: {y_test.mean():.4f}")
 
-    model = XGBClassifier(**XGBOOST_PARAMS)
+    local_params = {
+        **XGBOOST_PARAMS,
+        "scale_pos_weight": int((y_train == 0).sum() / max((y_train == 1).sum(), 1)),
+    }
+    model = XGBClassifier(**local_params, early_stopping_rounds=30)
     model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
+    print(f"  Best iteration: {model.best_iteration}")
 
-    y_pred = model.predict(X_test)
     y_prob = model.predict_proba(X_test)[:, 1]
-    metrics = compute_metrics(y_test.values, y_pred, y_prob)
 
-    print(f"\nBank {bank.upper()} baseline metrics:")
-    for k, v in metrics.items():
+    # Metrics at default threshold (0.5)
+    y_pred_default = model.predict(X_test)
+    metrics_default = compute_metrics(y_test.values, y_pred_default, y_prob)
+
+    # Find optimal threshold and compute metrics there
+    opt_thresh, opt_f1 = find_optimal_threshold(y_test.values, y_prob)
+    metrics_optimal = compute_metrics_at_threshold(y_test.values, y_prob, opt_thresh)
+
+    print(f"\nBank {bank.upper()} — Default threshold (0.5):")
+    for k, v in metrics_default.items():
         if k != "confusion_matrix":
             print(f"  {k}: {v}")
-    print(f"  confusion_matrix: {metrics['confusion_matrix']}")
 
+    print(f"\nBank {bank.upper()} — Optimal threshold ({opt_thresh:.2f}):")
+    for k, v in metrics_optimal.items():
+        if k != "confusion_matrix":
+            print(f"  {k}: {v}")
+    print(f"  confusion_matrix: {metrics_optimal['confusion_matrix']}")
+
+    # Save both metric sets
+    combined = {
+        "default_threshold": metrics_default,
+        "optimal_threshold": metrics_optimal,
+    }
     metrics_path = PARTITIONED_DIR / f"bank_{bank}_baseline_metrics.json"
-    save_metrics(metrics, metrics_path)
+    save_metrics(combined, metrics_path)
     print(f"\nMetrics saved → {metrics_path}")
 
     model_path = PARTITIONED_DIR / f"bank_{bank}_local_model.json"

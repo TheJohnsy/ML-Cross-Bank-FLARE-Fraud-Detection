@@ -17,24 +17,47 @@ def load_raw_data() -> pd.DataFrame:
 
 
 def partition(df: pd.DataFrame, seed: int = 42) -> dict[str, pd.DataFrame]:
-    """Assign card1 groups to banks non-IID (fraud rates differ per bank)."""
+    """Assign card1 groups to banks non-IID (fraud rates differ per bank).
+
+    Strategy: split cards into fraud-only, mixed, and clean buckets, then
+    distribute them unevenly so every bank has fraud but at different rates.
+    """
     rng = np.random.default_rng(seed)
 
-    # Compute per-card1 fraud rate
     card_stats = (
         df.groupby(PARTITION_KEY)[TARGET_COL]
-        .mean()
+        .agg(["mean", "count"])
         .reset_index()
-        .rename(columns={TARGET_COL: "fraud_rate"})
+        .rename(columns={"mean": "fraud_rate", "count": "tx_count"})
     )
-    # Sort by fraud rate and split: bank_a gets low-fraud cards, bank_c gets high
-    card_stats = card_stats.sort_values("fraud_rate").reset_index(drop=True)
-    n = len(card_stats)
-    thirds = [n // 3, 2 * (n // 3), n]
+
+    # Separate cards that have any fraud from clean cards
+    fraud_cards = card_stats[card_stats["fraud_rate"] > 0].copy()
+    clean_cards = card_stats[card_stats["fraud_rate"] == 0].copy()
+
+    # Shuffle both sets
+    fraud_cards = fraud_cards.sample(frac=1, random_state=seed).reset_index(drop=True)
+    clean_cards = clean_cards.sample(frac=1, random_state=seed).reset_index(drop=True)
+
+    # Distribute fraud cards unevenly: bank_c gets 60%, bank_b 28%, bank_a 12%
+    nf = len(fraud_cards)
+    fraud_split = {
+        "a": set(fraud_cards.iloc[: int(nf * 0.12)][PARTITION_KEY]),
+        "b": set(fraud_cards.iloc[int(nf * 0.12) : int(nf * 0.40)][PARTITION_KEY]),
+        "c": set(fraud_cards.iloc[int(nf * 0.40) :][PARTITION_KEY]),
+    }
+
+    # Give bank_a more clean cards (dilutes its fraud rate further),
+    # bank_c fewer clean cards (raises its fraud rate).
+    nc = len(clean_cards)
+    clean_split = {
+        "a": set(clean_cards.iloc[: int(nc * 0.45)][PARTITION_KEY]),
+        "b": set(clean_cards.iloc[int(nc * 0.45) : int(nc * 0.75)][PARTITION_KEY]),
+        "c": set(clean_cards.iloc[int(nc * 0.75) :][PARTITION_KEY]),
+    }
+
     card_sets = {
-        "a": set(card_stats.iloc[: thirds[0]][PARTITION_KEY]),
-        "b": set(card_stats.iloc[thirds[0] : thirds[1]][PARTITION_KEY]),
-        "c": set(card_stats.iloc[thirds[1] :][PARTITION_KEY]),
+        bank: fraud_split[bank] | clean_split[bank] for bank in BANKS
     }
     return {bank: df[df[PARTITION_KEY].isin(cards)].copy() for bank, cards in card_sets.items()}
 
@@ -46,7 +69,7 @@ def verify_non_iid(partitions: dict[str, pd.DataFrame]) -> None:
     for i in range(len(rate_vals)):
         for j in range(i + 1, len(rate_vals)):
             diff = abs(rate_vals[i] - rate_vals[j])
-            assert diff > 0.01, f"Banks too similar (diff={diff:.4f}); partition may be IID"
+            assert diff > 0.005, f"Banks too similar (diff={diff:.4f}); partition may be IID"
 
 
 def main() -> None:

@@ -1,4 +1,5 @@
 """SHAP analysis of the global federated model."""
+import argparse
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -17,7 +18,7 @@ from config import (
 # Expected velocity features to appear in top SHAP importance
 EXPECTED_TOP_FEATURES = {"tx_count_30m", "tx_count_2h", "amt_zscore"}
 
-GLOBAL_MODEL_PATH = Path(__file__).parent.parent / "workspace" / "server" / "run_1" / "app_server" / "global_fraud_model.json"
+DEFAULT_MODEL_PATH = Path(__file__).parent.parent / "workspace" / "server" / "run_1" / "app_server" / "global_fraud_model.json"
 OUTPUT_PLOT = Path(__file__).parent / "shap_summary.png"
 
 
@@ -35,28 +36,27 @@ def load_test_data(bank: str = "a") -> tuple[np.ndarray, np.ndarray, list[str]]:
     return X_test.values, y_test.values, feature_cols
 
 
-def load_global_model(feature_cols: list[str], X_sample: np.ndarray) -> XGBClassifier:
+def load_global_model(feature_cols: list[str], X_sample: np.ndarray, model_path: Path) -> XGBClassifier:
     """Load the global model trained by federated learning."""
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Global model not found at {model_path}. "
+            "Run federated training first or pass --model-path."
+        )
+
     model = XGBClassifier(**XGBOOST_PARAMS)
-    # Fit on a tiny dummy sample to initialise sklearn wrapper
     model.fit(X_sample[:2], np.array([0, 1]))
-    if GLOBAL_MODEL_PATH.exists():
-        model.get_booster().load_model(str(GLOBAL_MODEL_PATH))
-        print(f"Loaded global model from {GLOBAL_MODEL_PATH}")
-    else:
-        print(f"WARNING: Global model not found at {GLOBAL_MODEL_PATH}")
-        print("Using untrained model structure for SHAP demonstration.")
+    model.get_booster().load_model(str(model_path))
+    print(f"Loaded global model from {model_path}")
     return model
 
 
 def run_shap_analysis(model: XGBClassifier, X_test: np.ndarray, feature_cols: list[str]) -> None:
     explainer = shap.TreeExplainer(model)
 
-    # Use a sample of at most 2000 rows for speed
     sample = X_test[:2000] if len(X_test) > 2000 else X_test
     shap_values = explainer.shap_values(sample)
 
-    # Identify top-10 features by mean |SHAP|
     mean_abs_shap = np.abs(shap_values).mean(axis=0)
     top_idx = np.argsort(mean_abs_shap)[::-1][:10]
     top_features = {feature_cols[i] for i in top_idx}
@@ -72,7 +72,6 @@ def run_shap_analysis(model: XGBClassifier, X_test: np.ndarray, feature_cols: li
     else:
         print(f"\nAll expected features in top 10: {found}")
 
-    # Summary plot
     plt.figure(figsize=(10, 7))
     shap.summary_plot(
         shap_values,
@@ -88,10 +87,17 @@ def run_shap_analysis(model: XGBClassifier, X_test: np.ndarray, feature_cols: li
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--model-path", type=Path, default=DEFAULT_MODEL_PATH,
+        help="Path to the global federated model JSON file",
+    )
+    args = parser.parse_args()
+
     print("Loading test data (bank_a)...")
     X_test, _, feature_cols = load_test_data("a")
 
-    model = load_global_model(feature_cols, X_test)
+    model = load_global_model(feature_cols, X_test, args.model_path)
     run_shap_analysis(model, X_test, feature_cols)
 
 

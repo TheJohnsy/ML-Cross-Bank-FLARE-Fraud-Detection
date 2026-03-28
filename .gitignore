@@ -9,3 +9,20 @@ build/
 .env
 *.log
 evaluation/shap_summary.png
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Conda
+.conda/
+
+# Example reports
+example_reports/

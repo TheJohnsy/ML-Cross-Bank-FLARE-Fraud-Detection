@@ -1,5 +1,3 @@
-version: "3.9"
-
 networks:
   fl-net:
     driver: bridge
@@ -9,11 +7,11 @@ x-client-base: &client-base
   networks:
     - fl-net
   depends_on:
-    - nvflare-server
-  restart: on-failure
+    - server
+  restart: "no"
 
 services:
-  nvflare-server:
+  server:
     build: .
     networks:
       - fl-net
@@ -21,42 +19,49 @@ services:
       - "8002:8002"
       - "8003:8003"
     volumes:
-      - ./workspace/server:/workspace/workspace/server
+      - ./workspace/fraud_fl/prod_00/server:/workspace/server
+      - ./jobs/fraud_fl:/workspace/server/transfer/fraud_fl
     command: >
-      python -m nvflare.private.fed.app.server.server_train
-      -m /workspace/workspace/server
+      python3 -u -m nvflare.private.fed.app.server.server_train
+      -m /workspace/server
       -s fed_server.json
-      --set secure_train=false
+      --set secure_train=true org=openclaw config_folder=config
 
   bank_a:
     <<: *client-base
     volumes:
-      - ./workspace/site-1:/workspace/workspace/site-1
-      - ./data/partitioned/bank_a_engineered.csv:/workspace/data/partitioned/bank_a_engineered.csv:ro
+      - ./workspace/fraud_fl/prod_00/site-1:/workspace/site-1
+      - ./data/partitioned:/workspace/data/partitioned:ro
+      - ./config.py:/workspace/config.py:ro
+      - ./utils:/workspace/utils:ro
     command: >
-      python -m nvflare.private.fed.app.client.client_train
-      -m /workspace/workspace/site-1
+      python3 -u -m nvflare.private.fed.app.client.client_train
+      -m /workspace/site-1
       -s fed_client.json
-      --set secure_train=false uid=site-1
+      --set secure_train=true uid=site-1 org=bank_a config_folder=config
 
   bank_b:
     <<: *client-base
     volumes:
-      - ./workspace/site-2:/workspace/workspace/site-2
-      - ./data/partitioned/bank_b_engineered.csv:/workspace/data/partitioned/bank_b_engineered.csv:ro
+      - ./workspace/fraud_fl/prod_00/site-2:/workspace/site-2
+      - ./data/partitioned:/workspace/data/partitioned:ro
+      - ./config.py:/workspace/config.py:ro
+      - ./utils:/workspace/utils:ro
     command: >
-      python -m nvflare.private.fed.app.client.client_train
-      -m /workspace/workspace/site-2
+      python3 -u -m nvflare.private.fed.app.client.client_train
+      -m /workspace/site-2
       -s fed_client.json
-      --set secure_train=false uid=site-2
+      --set secure_train=true uid=site-2 org=bank_b config_folder=config
 
   bank_c:
     <<: *client-base
     volumes:
-      - ./workspace/site-3:/workspace/workspace/site-3
-      - ./data/partitioned/bank_c_engineered.csv:/workspace/data/partitioned/bank_c_engineered.csv:ro
+      - ./workspace/fraud_fl/prod_00/site-3:/workspace/site-3
+      - ./data/partitioned:/workspace/data/partitioned:ro
+      - ./config.py:/workspace/config.py:ro
+      - ./utils:/workspace/utils:ro
     command: >
-      python -m nvflare.private.fed.app.client.client_train
-      -m /workspace/workspace/site-3
+      python3 -u -m nvflare.private.fed.app.client.client_train
+      -m /workspace/site-3
       -s fed_client.json
-      --set secure_train=false uid=site-3
+      --set secure_train=true uid=site-3 org=bank_c config_folder=config
