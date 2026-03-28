@@ -1,5 +1,10 @@
 # Cross-Bank Federated Transaction Fraud Detection
 
+## Contributors
+
+* **Zohar Sahar** - 315144840
+* **Yonatan Harel** - 208742593
+
 This project implements a privacy-preserving, federated transaction fraud detection system using NVIDIA FLARE (NVFlare) and XGBoost. It enables financial institutions to collaboratively train high-performance models while keeping sensitive raw transaction data strictly local to address regulatory and data-sharing constraints.
 
 ## Goals and Success Criteria
@@ -104,11 +109,6 @@ Key observations:
 - The V-column group summary `vg11_std` ranks **#1**, validating our dimensionality reduction approach for the 339 Vesta-proprietary features.
 - Client-group aggregated feature `uid_C8_mean` appears at #7, confirming that grouping clients and computing aggregate statistics provides signal.
 - Card and address features (`card1`, `card2`, `addr1`) are highly ranked — these are the building blocks of the client group identifier.
-
-## Contributors
-
-* **Zohar Sahar** - 315144840
-* **Yonatan Harel** - 208742593
 
 
 ### Docker Infrastructure Diagram
