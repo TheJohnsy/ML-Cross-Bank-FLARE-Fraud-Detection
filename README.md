@@ -87,8 +87,8 @@ The federated model did not achieve collaborative uplift over local baselines. T
 
 Top-10 features by mean |SHAP| on the federated global model:
 
-| Rank | Feature | Mean |SHAP| |
-|------|---------|--------------|
+| Rank | Feature | Mean \|SHAP\| |
+|------|---------|---------------|
 | 1 | vg11_std | 0.780 |
 | 2 | C13 | 0.566 |
 | 3 | TransactionAmt | 0.561 |
