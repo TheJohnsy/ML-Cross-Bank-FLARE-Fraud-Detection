@@ -7,6 +7,10 @@
 
 This project implements a privacy-preserving, federated transaction fraud detection system using NVIDIA FLARE (NVFlare) and XGBoost. It enables financial institutions to collaboratively train high-performance models while keeping sensitive raw transaction data strictly local to address regulatory and data-sharing constraints.
 
+## How to Run
+
+See [instructions.md](instructions.md) for full step-by-step execution guide.
+
 ## Goals and Success Criteria
 
 The project is benchmarked against specific performance and security milestones.
@@ -113,7 +117,3 @@ Key observations:
 
 ### Docker Infrastructure Diagram
 <img width="804" height="490" alt="image" src="https://github.com/user-attachments/assets/8382db20-ea84-4459-9feb-de1d70cddd27" />
-
-## How to Run
-
-See [instructions.md](instructions.md) for full step-by-step execution guide.
