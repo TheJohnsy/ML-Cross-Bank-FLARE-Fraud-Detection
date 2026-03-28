@@ -2,9 +2,38 @@
 
 ## Prerequisites
 
-- **Python 3.10** (required by NVFlare — versions 3.13+ are not supported)
-- **conda** (recommended for managing the Python environment)
-- **Docker** (optional — only needed if you want to verify the containerised infrastructure)
+### conda
+Used to manage a Python 3.10 environment (NVFlare does not support Python 3.13+).
+
+**macOS (Homebrew):**
+```bash
+brew install --cask miniconda
+conda init zsh  # or: conda init bash
+```
+
+**Linux:**
+```bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+```
+
+**Windows:**
+Download and run the installer from https://docs.conda.io/en/latest/miniconda.html
+
+### Docker (optional)
+Only needed if you want to verify the containerised infrastructure with mTLS.
+
+**macOS:**
+```bash
+brew install --cask docker
+```
+
+**Linux:**
+```bash
+sudo apt-get install docker.io docker-compose
+```
+
+**Windows:** Download Docker Desktop from https://www.docker.com/products/docker-desktop
 
 ## Environment Setup
 
